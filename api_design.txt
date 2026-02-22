@@ -1,0 +1,131 @@
+AssetTrack Pro — Atomic Feature List
+
+=== Admin Authentication ===
+1. Feature: Admin Login
+   - API Endpoint: POST /api/auth/login
+   - Database Action: SELECT admin FROM admins table WHERE email = given email AND verify password
+
+2. Feature: Admin Logout
+   - API Endpoint: POST /api/auth/logout
+   - Database Action: Invalidate session/token (no DB change or update session table)
+
+=== Employee Management ===
+3. Feature: Add new employee
+   - API Endpoint: POST /api/employees
+   - Database Action: INSERT new row into employees table (name, email, department, role)
+
+4. Feature: View all employees
+   - API Endpoint: GET /api/employees
+   - Database Action: SELECT all rows FROM employees table
+
+5. Feature: View employee details
+   - API Endpoint: GET /api/employees/{id}
+   - Database Action: SELECT employee WHERE id = given id
+
+6. Feature: Update employee details
+   - API Endpoint: PUT /api/employees/{id}
+   - Database Action: UPDATE employees table WHERE id = given id
+
+7. Feature: Delete employee
+   - API Endpoint: DELETE /api/employees/{id}
+   - Database Action: DELETE FROM employees table WHERE id = given id
+
+=== Asset Management ===
+8. Feature: Add new asset
+   - API Endpoint: POST /api/assets
+   - Database Action: INSERT INTO assets table (asset_name, type, model, serial_no, status, purchase_date)
+
+9. Feature: View all assets
+   - API Endpoint: GET /api/assets
+   - Database Action: SELECT all rows FROM assets table
+
+10. Feature: View asset details
+    - API Endpoint: GET /api/assets/{id}
+    - Database Action: SELECT asset WHERE id = given id
+
+11. Feature: Update asset information
+    - API Endpoint: PUT /api/assets/{id}
+    - Database Action: UPDATE assets table WHERE id = given id
+
+12. Feature: Delete asset
+    - API Endpoint: DELETE /api/assets/{id}
+    - Database Action: DELETE FROM assets table WHERE id = given id
+
+=== Asset Assignment ===
+13. Feature: Assign asset to employee
+    - API Endpoint: POST /api/assignments
+    - Database Action: 
+      - INSERT INTO assignments table (asset_id, employee_id, issue_date)
+      - UPDATE assets table → status = 'Assigned'
+
+14. Feature: View all assignments
+    - API Endpoint: GET /api/assignments
+    - Database Action: SELECT assignments JOIN employees JOIN assets
+
+15. Feature: View assignments of a specific employee
+    - API Endpoint: GET /api/employees/{id}/assignments
+    - Database Action: SELECT assignments WHERE employee_id = given id
+
+=== Asset Return System ===
+16. Feature: Mark asset as returned
+    - API Endpoint: PUT /api/assignments/{id}/return
+    - Database Action: 
+      - UPDATE assignments table → return_date = current date
+      - UPDATE assets table → status = 'Available'
+
+=== Asset Status Tracking ===
+17. Feature: Mark asset under maintenance
+    - API Endpoint: PUT /api/assets/{id}/maintenance
+    - Database Action: UPDATE assets table → status = 'Maintenance'
+
+18. Feature: Mark asset available
+    - API Endpoint: PUT /api/assets/{id}/available
+    - Database Action: UPDATE assets table → status = 'Available'
+
+19. Feature: View asset status
+    - API Endpoint: GET /api/assets/{id}/status
+    - Database Action: SELECT status FROM assets table WHERE id = given id
+
+=== Search Functionality ===
+20. Feature: Search assets by name or type
+    - API Endpoint: GET /api/assets/search?q=keyword
+    - Database Action: SELECT assets WHERE name OR type LIKE keyword
+
+21. Feature: Search assets by employee
+    - API Endpoint: GET /api/assets/search?employee_id={id}
+    - Database Action: SELECT assets JOIN assignments WHERE employee_id = given id
+
+=== Dashboard Overview ===
+22. Feature: Get total asset count
+    - API Endpoint: GET /api/dashboard/total-assets
+    - Database Action: COUNT rows FROM assets table
+
+23. Feature: Get assigned asset count
+    - API Endpoint: GET /api/dashboard/assigned-assets
+    - Database Action: COUNT assets WHERE status = 'Assigned'
+
+24. Feature: Get available asset count
+    - API Endpoint: GET /api/dashboard/available-assets
+    - Database Action: COUNT assets WHERE status = 'Available'
+
+=== Asset History Tracking ===
+25. Feature: View history of an asset
+    - API Endpoint: GET /api/assets/{id}/history
+    - Database Action: SELECT FROM asset_history table WHERE asset_id = given id
+
+26. Feature: Record assignment history (automatic)
+    - API Endpoint: Internal trigger
+    - Database Action: INSERT INTO asset_history table when assignment occurs
+
+27. Feature: Record return history (automatic)
+    - API Endpoint: Internal trigger
+    - Database Action: INSERT INTO asset_history table when asset is returned
+
+=== Reports Generation ===
+28. Feature: Generate asset report
+    - API Endpoint: GET /api/reports/assets
+    - Database Action: SELECT all assets with status
+
+29. Feature: Generate assignment report
+    - API Endpoint: GET /api/reports/assignments
+    - Database Action: SELECT assignments JOIN employees JOIN assets
