@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional, Any
-import models, schemas, database
+import models, schemas, database, dependencies
 
 router = APIRouter(
     prefix="/api/assets",
@@ -59,7 +59,7 @@ def search_assets(
     return query.all()
 
 @router.get("/", response_model=List[schemas.AssetResponse])
-def get_all_assets(db: Session = Depends(database.get_db)) -> Any:
+def get_all_assets(db: Session = Depends(database.get_db), current_user: models.User = Depends(dependencies.RequirePrivilege('view:inventory'))) -> Any:
     """
     View all assets.
     
@@ -99,7 +99,7 @@ def update_asset(id: int, asset_update: schemas.AssetUpdate, db: Session = Depen
     return asset
 
 @router.delete("/{id}", status_code=status.HTTP_200_OK)
-def delete_asset(id: int, db: Session = Depends(database.get_db)) -> Any:
+def delete_asset(id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(dependencies.RequirePrivilege('delete:asset'))) -> Any:
     """
     Delete asset entirely.
     

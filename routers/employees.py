@@ -5,7 +5,7 @@ CRU operations for managing employees within the firm.
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Any
-import models, schemas, database
+import models, schemas, database, dependencies
 
 router = APIRouter(
     prefix="/api/employees",
@@ -77,7 +77,7 @@ def update_employee(id: int, emp_update: schemas.EmployeeUpdate, db: Session = D
     return employee
 
 @router.delete("/{id}", status_code=status.HTTP_200_OK)
-def delete_employee(id: int, db: Session = Depends(database.get_db)) -> Any:
+def delete_employee(id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(dependencies.RequirePrivilege('manage:users'))) -> Any:
     """
     Delete an employee.
     

@@ -1,0 +1,58 @@
+OptiAsset / AssetTrack Pro
+Frontend UI Architecture (MVP Version)
+Built using Next.js (App Router)
+
+--------------------------------------------------
+
+Role: IT Administrator
+(Full access to manage assets and employees)
+
+Page: /dashboard
+Component: <Sidebar /> - Navigation (Dashboard, Assets, Employees, Logout)
+Component: <TopNavbar /> - Shows admin profile and logout button
+Component: <StatCards /> - Displays Total Assets, Assigned Assets, Available Assets
+Component: <RecentActivityTable /> - Shows last 5 asset assignments
+
+Page: /assets
+Component: <Sidebar />
+Component: <TopNavbar />
+Component: <AssetTable /> - Table with search, filter, and pagination
+Component: <AddAssetModal /> - Form to add new asset
+Component: <EditAssetModal /> - Edit existing asset details
+Component: <DeleteConfirmationDialog /> - Confirm before deleting asset
+
+Page: /employees
+Component: <Sidebar />
+Component: <TopNavbar />
+Component: <EmployeeTable /> - List of employees
+Component: <AssignAssetModal /> - Assign asset to employee
+Component: <UnassignAssetButton /> - Remove assigned asset
+
+--------------------------------------------------
+
+Role: Standard Employee
+(Limited access - can only view their assigned assets)
+
+Page: /my-assets
+Component: <TopNavbar />
+Component: <MyAssetCardList /> - Cards showing assigned assets
+Component: <ReportIssueButton /> - Button to report damaged asset
+
+Page: /profile
+Component: <TopNavbar />
+Component: <ProfileDetails /> - View personal information
+Component: <ChangePasswordForm /> - Update password
+
+--------------------------------------------------
+
+Shared Global Components
+(Reusable across multiple pages)
+
+Component: <Sidebar /> - Role-based navigation menu
+Component: <TopNavbar /> - User profile and logout
+Component: <ProtectedRoute /> - Restricts access based on role
+Component: <ModalWrapper /> - Reusable modal container
+Component: <ConfirmationDialog /> - Delete confirmation popup
+Component: <LoadingSpinner /> - Shows during API loading
+Component: <ToastNotification /> - Success/Error alerts
+Component: <EmptyState /> - Shown when no data exists

@@ -1,11 +1,49 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional, List
+from typing import Optional, List, Any
 from datetime import date, datetime
 
-# --- HR Admin Schemas ---
+# --- Auth & RBAC Schemas ---
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: Any = None # Optional user info to help frontend
+
+class TokenData(BaseModel):
+    user_id: Optional[str] = None
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    role_id: int
+
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    role_id: int
+
+    class Config:
+        from_attributes = True
+
+class RoleCreate(BaseModel):
+    name: str
+    permissions: List[str]
+
+class RoleResponse(BaseModel):
+    id: int
+    name: str
+    permissions: List[str]
+
+    class Config:
+        from_attributes = True
+
+# --- HR Admin Schemas (Legacy/Deprecated if replaced by User) ---
 class AdminLogin(BaseModel):
     email: EmailStr
-    password: str # Required by assignment logic, though not in DB dump
+    password: str 
 
 class AdminToken(BaseModel):
     access_token: str

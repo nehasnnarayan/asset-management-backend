@@ -1,6 +1,22 @@
-from sqlalchemy import Column, Integer, String, Date, Numeric, Text, ForeignKey, TIMESTAMP
+from sqlalchemy import Column, Integer, String, Date, Numeric, Text, ForeignKey, TIMESTAMP, JSON
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
+
+class Role(Base):
+    __tablename__ = "roles"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), unique=True, nullable=False)
+    permissions = Column(JSON, default=list)
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(150), unique=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    role_id = Column(Integer, ForeignKey("roles.id"))
+    
+    role = relationship("Role")
 
 class Department(Base):
     __tablename__ = "departments"
