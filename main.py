@@ -7,7 +7,7 @@ from database import engine
 # Note: In production you would use Alembic or similar.
 models.Base.metadata.create_all(bind=engine)
 
-from routers import auth, employees, assets, assignments, dashboard
+from routers import auth, employees, assets, assignments, dashboard, admins
 
 app = FastAPI(
     title="AssetTrack Pro API",
@@ -33,6 +33,9 @@ app.include_router(assets.router)
 app.include_router(assignments.router)
 app.include_router(dashboard.dashboard_router)
 app.include_router(dashboard.reports_router)
+
+# Superadmin Hub
+app.include_router(admins.router)
 
 @app.get("/", tags=["Health Check"])
 def health_check():

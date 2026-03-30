@@ -12,17 +12,17 @@ class TokenData(BaseModel):
     user_id: Optional[str] = None
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    employee_code: str
     password: str
 
 class UserCreate(BaseModel):
-    email: EmailStr
+    employee_code: str
     password: str
     role_id: int
 
 class UserResponse(BaseModel):
     id: int
-    email: EmailStr
+    employee_code: str
     role_id: int
 
     class Config:

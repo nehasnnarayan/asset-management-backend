@@ -12,7 +12,7 @@ class Role(Base):
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(150), unique=True, nullable=False)
+    employee_code = Column(String(50), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     role_id = Column(Integer, ForeignKey("roles.id"))
     

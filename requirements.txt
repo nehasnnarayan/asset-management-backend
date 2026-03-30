@@ -5,3 +5,5 @@ psycopg2-binary
 pydantic
 python-dateutil
 email-validator
+bcrypt
+PyJWT
