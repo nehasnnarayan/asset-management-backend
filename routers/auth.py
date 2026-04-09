@@ -29,16 +29,22 @@ def login(login_data: schemas.UserLogin, db: Session = Depends(database.get_db))
         data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
     
-    role_name = user.role.name if user.role else None
-    permissions = user.role.permissions if user.role else []
+    permissions = []
+    role_names = []
+    for role in user.roles:
+        role_names.append(role.name)
+        if role.permissions:
+            permissions.extend(role.permissions)
+    
+    unique_permissions = list(set(permissions))
     
     return {
         "access_token": access_token, 
         "token_type": "bearer",
         "user": {
             "employee_code": user.employee_code,
-            "role": role_name,
-            "permissions": permissions
+            "roles": role_names,
+            "permissions": unique_permissions
         }
     }
 
@@ -47,6 +53,7 @@ def setup_default_users(db: Session = Depends(database.get_db)):
     """
     Helper endpoint to seed the database with Superadmin, Admin, and Employee roles/users.
     """
+    # Ensure Roles exist
     super_role = db.query(models.Role).filter(models.Role.name == "Superadmin").first()
     if not super_role:
         super_role = models.Role(name="Superadmin", permissions=["manage:super", "delete:asset", "view:inventory", "manage:users"])
@@ -63,26 +70,30 @@ def setup_default_users(db: Session = Depends(database.get_db)):
         db.add(emp_role)
     db.commit()
     
+    # Ensure Users exist and have roles
     super_user = db.query(models.User).filter(models.User.employee_code == "SUPER_001").first()
     if not super_user:
         hashed_pw = bcrypt.hashpw(b"super123", bcrypt.gensalt()).decode('utf-8')
-        super_user = models.User(employee_code="SUPER_001", hashed_password=hashed_pw, role_id=super_role.id)
+        super_user = models.User(employee_code="SUPER_001", hashed_password=hashed_pw)
         db.add(super_user)
+    super_user.roles = [super_role, admin_role, emp_role]
 
     admin_user = db.query(models.User).filter(models.User.employee_code == "ADMIN_001").first()
     if not admin_user:
         hashed_pw = bcrypt.hashpw(b"admin123", bcrypt.gensalt()).decode('utf-8')
-        admin_user = models.User(employee_code="ADMIN_001", hashed_password=hashed_pw, role_id=admin_role.id)
+        admin_user = models.User(employee_code="ADMIN_001", hashed_password=hashed_pw)
         db.add(admin_user)
+    admin_user.roles = [admin_role]
         
     emp_user = db.query(models.User).filter(models.User.employee_code == "EMP_001").first()
     if not emp_user:
         hashed_pw = bcrypt.hashpw(b"employee123", bcrypt.gensalt()).decode('utf-8')
-        emp_user = models.User(employee_code="EMP_001", hashed_password=hashed_pw, role_id=emp_role.id)
+        emp_user = models.User(employee_code="EMP_001", hashed_password=hashed_pw)
         db.add(emp_user)
+    emp_user.roles = [emp_role]
         
     db.commit()
-    return {"message": "Setup complete. Logins - Super: SUPER_001 / super123 | Admin: ADMIN_001 / admin123 | Employee: EMP_001 / employee123."}
+    return {"message": "Setup complete. Logins - Super (All Roles): SUPER_001 / super123 | Admin: ADMIN_001 / admin123 | Employee: EMP_001 / employee123."}
 
 @router.post("/logout")
 def logout():

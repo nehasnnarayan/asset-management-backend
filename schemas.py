@@ -20,14 +20,6 @@ class UserCreate(BaseModel):
     password: str
     role_id: int
 
-class UserResponse(BaseModel):
-    id: int
-    employee_code: str
-    role_id: int
-
-    class Config:
-        from_attributes = True
-
 class RoleCreate(BaseModel):
     name: str
     permissions: List[str]
@@ -36,6 +28,14 @@ class RoleResponse(BaseModel):
     id: int
     name: str
     permissions: List[str]
+
+    class Config:
+        from_attributes = True
+
+class UserResponse(BaseModel):
+    id: int
+    employee_code: str
+    roles: List[RoleResponse] = []
 
     class Config:
         from_attributes = True

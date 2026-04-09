@@ -49,17 +49,31 @@ class RequirePrivilege:
         self.required_permission = required_permission
 
     def __call__(self, current_user: models.User = Depends(get_current_user)):
-        if not current_user.role or not current_user.role.permissions:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="User has no role or permissions assigned"
-            )
-            
-        # Role permissions is a JSON array of strings
-        if self.required_permission not in current_user.role.permissions:
+        # Aggregate permissions from all roles
+        all_permissions = []
+        for role in current_user.roles:
+            if role.permissions:
+                all_permissions.extend(role.permissions)
+        
+        if self.required_permission not in all_permissions:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Operation not permitted. Required privilege: {self.required_permission}"
+            )
+        
+        return current_user
+
+class RequireRole:
+    def __init__(self, required_role: str):
+        self.required_role = required_role
+
+    def __call__(self, current_user: models.User = Depends(get_current_user)):
+        user_roles = [r.name for r in current_user.roles]
+        
+        if self.required_role not in user_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Unauthorized. Required role: {self.required_role}"
             )
         
         return current_user

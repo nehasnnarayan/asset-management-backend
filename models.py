@@ -1,7 +1,15 @@
-from sqlalchemy import Column, Integer, String, Date, Numeric, Text, ForeignKey, TIMESTAMP, JSON
+from sqlalchemy import Column, Integer, String, Date, Numeric, Text, ForeignKey, TIMESTAMP, JSON, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
+
+# Association table for User-Role many-to-many relationship
+user_roles = Table(
+    "user_roles",
+    Base.metadata,
+    Column("user_id", Integer, ForeignKey("users.id"), primary_key=True),
+    Column("role_id", Integer, ForeignKey("roles.id"), primary_key=True),
+)
 
 class Role(Base):
     __tablename__ = "roles"
@@ -14,9 +22,8 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     employee_code = Column(String(50), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    role_id = Column(Integer, ForeignKey("roles.id"))
     
-    role = relationship("Role")
+    roles = relationship("Role", secondary=user_roles)
 
 class Department(Base):
     __tablename__ = "departments"
