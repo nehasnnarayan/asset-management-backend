@@ -7,3 +7,5 @@ python-dateutil
 email-validator
 bcrypt
 PyJWT
+python-dotenv
+gunicorn
