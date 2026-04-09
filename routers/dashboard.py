@@ -20,31 +20,40 @@ reports_router = APIRouter(
 
 # --- Dashboard Overviews ---
 
-@dashboard_router.get("/total-assets")
-def get_total_assets(db: Session = Depends(database.get_db)) -> Any:
+@dashboard_router.get("/summary")
+def get_dashboard_summary(db: Session = Depends(database.get_db)) -> Any:
     """
-    Get total asset count.
+    Get aggregated dashboard statistics.
+    """
+    total = db.query(models.Asset).count()
+    assigned = db.query(models.Asset).filter(models.Asset.asset_status == 'ASSIGNED').count()
+    available = db.query(models.Asset).filter(models.Asset.asset_status == 'AVAILABLE').count()
+    maintenance = db.query(models.Asset).filter(models.Asset.asset_status == 'MAINTENANCE').count()
     
-    Queries complete DB bounds for gross item count.
-    """
-    count = db.query(models.Asset).count()
-    return {"total_assets": count}
+    return {
+        "total_assets": total,
+        "assigned_assets": assigned,
+        "available_assets": available,
+        "maintenance_assets": maintenance
+    }
 
-@dashboard_router.get("/assigned-assets")
-def get_assigned_assets(db: Session = Depends(database.get_db)) -> Any:
+@dashboard_router.get("/recent-activities")
+def get_recent_activities(db: Session = Depends(database.get_db)) -> Any:
     """
-    Get assigned asset count.
+    Get the last 5 asset assignments with joined details.
     """
-    count = db.query(models.Asset).filter(models.Asset.asset_status == 'ASSIGNED').count()
-    return {"assigned_assets": count}
-
-@dashboard_router.get("/available-assets")
-def get_available_assets(db: Session = Depends(database.get_db)) -> Any:
-    """
-    Get available asset count.
-    """
-    count = db.query(models.Asset).filter(models.Asset.asset_status == 'AVAILABLE').count()
-    return {"available_assets": count}
+    activities = db.query(models.AssetAssignment).order_by(models.AssetAssignment.created_at.desc()).limit(5).all()
+    
+    return [
+        {
+            "id": a.asset.asset_code,
+            "asset": a.asset.asset_name,
+            "employee": f"{a.employee.first_name} {a.employee.last_name}" if a.employee.last_name else a.employee.first_name,
+            "status": a.assignment_status,
+            "date": a.assignment_date.isoformat()
+        }
+        for a in activities
+    ]
 
 # --- Reports Generation ---
 

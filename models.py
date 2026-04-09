@@ -84,6 +84,9 @@ class AssetAssignment(Base):
     remarks = Column(Text)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
+    asset = relationship("Asset")
+    employee = relationship("Employee")
+
 class AssetMaintenanceLog(Base):
     """
     Functions structurally as the asset history per the DB dump.
