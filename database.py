@@ -8,10 +8,11 @@ load_dotenv()
 
 # We assume a standard PostgreSQL connection. Update credentials as needed.
 # Format: postgresql://<username>:<password>@<host>:<port>/<dbname>
-SQLALCHEMY_DATABASE_URL = os.environ.get(
-    "DATABASE_URL", 
-    "sqlite:///./test.db"
-)
+SQLALCHEMY_DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./test.db")
+
+# Fix for Supabase/Heroku URLs which use 'postgres://' instead of 'postgresql://'
+if SQLALCHEMY_DATABASE_URL and SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
     engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
