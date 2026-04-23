@@ -20,6 +20,10 @@ class UserCreate(BaseModel):
     password: str
     role_id: int
 
+class PasswordChange(BaseModel):
+    old_password: str
+    new_password: str
+
 class RoleCreate(BaseModel):
     name: str
     permissions: List[str]
@@ -69,6 +73,10 @@ class EmployeeBase(BaseModel):
 
 class EmployeeCreate(EmployeeBase):
     employee_code: str
+    password: Optional[str] = None
+
+class ProvisionAdminRequest(EmployeeCreate):
+    password: str
 
 class EmployeeUpdate(BaseModel):
     first_name: Optional[str] = None
@@ -91,7 +99,7 @@ class EmployeeResponse(EmployeeBase):
 class AssetBase(BaseModel):
     asset_name: str
     asset_category: Optional[str] = None
-    purchase_cost: Optional[float] = None
+    purchase_cost: Optional[Any] = None
     asset_condition: Optional[str] = "GOOD"
 
 class AssetCreate(AssetBase):
@@ -113,6 +121,9 @@ class AssetResponse(AssetBase):
     class Config:
         from_attributes = True
 
+class IssueReport(BaseModel):
+    description: str
+
 # --- Assignment Schemas ---
 class AssignmentCreate(BaseModel):
     asset_id: int
@@ -124,6 +135,7 @@ class AssignmentCreate(BaseModel):
 class AssignmentResponse(BaseModel):
     assignment_id: int
     asset_id: int
+    asset: Optional[AssetResponse] = None
     employee_id: int
     assigned_by_hr_id: Optional[int] = None
     assignment_date: date

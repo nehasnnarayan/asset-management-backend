@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Any
 import models, schemas, database, dependencies
+import bcrypt
 
 router = APIRouter(
     prefix="/api/employees",
@@ -28,8 +29,26 @@ def create_employee(employee: schemas.EmployeeCreate, db: Session = Depends(data
     if db_emp:
         raise HTTPException(status_code=400, detail="Email already registered")
         
-    new_employee = models.Employee(**employee.model_dump())
+    import bcrypt
+    # 1. Create Employee record
+    employee_data = employee.dict(exclude={"password"})
+    new_employee = models.Employee(**employee_data)
     db.add(new_employee)
+    db.flush() # Secure the ID before continuing
+
+    # 2. If password provided, establish User account
+    if employee.password:
+        hashed = bcrypt.hashpw(employee.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        new_user = models.User(
+            employee_code=employee.employee_code,
+            hashed_password=hashed
+        )
+        # Standardize with 'Employee' role
+        emp_role = db.query(models.Role).filter(models.Role.name == "Employee").first()
+        if emp_role:
+            new_user.roles.append(emp_role)
+        db.add(new_user)
+        
     db.commit()
     db.refresh(new_employee)
     return new_employee
@@ -68,7 +87,7 @@ def update_employee(id: int, emp_update: schemas.EmployeeUpdate, db: Session = D
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
         
-    update_data = emp_update.model_dump(exclude_unset=True)
+    update_data = emp_update.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(employee, key, value)
         
@@ -100,5 +119,62 @@ def get_employee_assignments(id: int, db: Session = Depends(database.get_db)) ->
     - **id**: Numeric pk of Employee.
     Returns all assigned equipment properties.
     """
-    assignments = db.query(models.AssetAssignment).filter(models.AssetAssignment.employee_id == id).all()
+    from sqlalchemy.orm import joinedload
+    assignments = db.query(models.AssetAssignment).options(joinedload(models.AssetAssignment.asset)).filter(models.AssetAssignment.employee_id == id).all()
     return assignments
+
+@router.post("/provision-admin", response_model=schemas.EmployeeResponse)
+def provision_admin(req: schemas.ProvisionAdminRequest, db: Session = Depends(database.get_db)) -> Any:
+    """
+    Provision a new Admin user (Superadmin only).
+    Creates an Employee record and a User account with Admin role.
+    """
+    # 1. Check if employee already exists
+    existing_emp = db.query(models.Employee).filter(models.Employee.email == req.email).first()
+    if existing_emp:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # 2. Create Employee
+    new_emp = models.Employee(
+        employee_code=req.employee_code,
+        first_name=req.first_name,
+        last_name=req.last_name,
+        email=req.email,
+        designation=req.designation or "Administrator"
+    )
+    db.add(new_emp)
+    db.flush()
+
+    # 3. Create User Account
+    hashed = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    new_user = models.User(
+        employee_code=req.employee_code,
+        hashed_password=hashed
+    )
+    
+    # 4. Assign Admin Role
+    admin_role = db.query(models.Role).filter(models.Role.name == "Admin").first()
+    if admin_role:
+        new_user.roles.append(admin_role)
+    
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_emp)
+    return new_emp
+
+@router.get("/admins/list", response_model=List[schemas.EmployeeResponse])
+def list_admins(db: Session = Depends(database.get_db)) -> Any:
+    """
+    List all employees who have the Admin role.
+    """
+    # Join User and Employee on employee_code, filtering by Role name
+    admins = db.query(models.Employee).join(
+        models.User, models.Employee.employee_code == models.User.employee_code
+    ).join(
+        models.User.roles
+    ).filter(
+        models.Role.name == "Admin"
+    ).all()
+    
+    return admins
+

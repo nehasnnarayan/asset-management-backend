@@ -7,13 +7,14 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional, Any
 import models, schemas, database, dependencies
+from datetime import date
 
 router = APIRouter(
     prefix="/api/assets",
     tags=["Asset Management"]
 )
 
-@router.post("/", response_model=schemas.AssetResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=schemas.AssetResponse, status_code=status.HTTP_201_CREATED)
 def create_asset(asset: schemas.AssetCreate, db: Session = Depends(database.get_db)) -> Any:
     """
     Add a new asset.
@@ -28,7 +29,7 @@ def create_asset(asset: schemas.AssetCreate, db: Session = Depends(database.get_
     if db_asset:
         raise HTTPException(status_code=400, detail="Asset code already exists")
     
-    new_asset = models.Asset(**asset.model_dump())
+    new_asset = models.Asset(**asset.dict())
     db.add(new_asset)
     db.commit()
     db.refresh(new_asset)
@@ -58,7 +59,7 @@ def search_assets(
         
     return query.all()
 
-@router.get("/", response_model=List[schemas.AssetResponse])
+@router.get("", response_model=List[schemas.AssetResponse])
 def get_all_assets(db: Session = Depends(database.get_db), current_user: models.User = Depends(dependencies.RequirePrivilege('view:inventory'))) -> Any:
     """
     View all assets.
@@ -90,7 +91,7 @@ def update_asset(id: int, asset_update: schemas.AssetUpdate, db: Session = Depen
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
         
-    update_data = asset_update.model_dump(exclude_unset=True)
+    update_data = asset_update.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(asset, key, value)
         
@@ -141,6 +142,32 @@ def mark_asset_available(id: int, db: Session = Depends(database.get_db)) -> Any
         raise HTTPException(status_code=404, detail="Asset not found")
         
     asset.asset_status = 'AVAILABLE'
+    db.commit()
+    db.refresh(asset)
+    return asset
+
+@router.post("/{id}/report-issue", response_model=schemas.AssetResponse)
+def report_issue(id: int, issue: schemas.IssueReport, db: Session = Depends(database.get_db)) -> Any:
+    """
+    Report an issue on an asset.
+    
+    Marks the asset as MAINTENANCE and logs the user's description.
+    """
+    asset = db.query(models.Asset).filter(models.Asset.asset_id == id).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+        
+    asset.asset_status = 'MAINTENANCE'
+    
+    # Create a maintenance log entry for the issue
+    new_log = models.AssetMaintenanceLog(
+        asset_id=id,
+        maintenance_type='ISSUE',
+        maintenance_description=issue.description,
+        maintenance_date=date.today(),
+        performed_by='Employee' # Ideally fetch from current_user
+    )
+    db.add(new_log)
     db.commit()
     db.refresh(asset)
     return asset

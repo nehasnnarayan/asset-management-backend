@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import models
 from database import engine
@@ -17,14 +18,21 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Apply CORS middleware to allow requests from any origin during development
+# Apply highly permissive CORS for development
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"System Error: {str(exc)}"},
+    )
 
 # Registering Routers mapped exactly to 'api_design.txt' feature lists
 app.include_router(auth.router)

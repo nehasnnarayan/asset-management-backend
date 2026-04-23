@@ -37,17 +37,67 @@ def login(login_data: schemas.UserLogin, db: Session = Depends(database.get_db))
         if role.permissions:
             permissions.extend(role.permissions)
     
+    # Hierarchy logic for switching
+    if "Superadmin" in role_names:
+        if "Admin" not in role_names: role_names.append("Admin")
+        if "Employee" not in role_names: role_names.append("Employee")
+    elif "Admin" in role_names:
+        if "Employee" not in role_names: role_names.append("Employee")
+    
     unique_permissions = list(set(permissions))
+    
+    # Fetch corresponding employee record to get employee_id
+    employee = db.query(models.Employee).filter(models.Employee.employee_code == user.employee_code).first()
+    emp_id = employee.employee_id if employee else None
     
     return {
         "access_token": access_token, 
         "token_type": "bearer",
         "user": {
+            "id": user.id,
+            "employee_id": emp_id,
             "employee_code": user.employee_code,
             "roles": role_names,
             "permissions": unique_permissions
         }
     }
+
+@router.get("/me")
+def get_me(db: Session = Depends(database.get_db), current_user: models.User = Depends(dependencies.get_current_user)):
+    """
+    Get current user profile.
+    """
+    employee = db.query(models.Employee).filter(models.Employee.employee_code == current_user.employee_code).first()
+    emp_id = employee.employee_id if employee else None
+    
+    permissions = []
+    role_names = []
+    for role in current_user.roles:
+        role_names.append(role.name)
+        if role.permissions:
+            permissions.extend(role.permissions)
+            
+    return {
+        "id": current_user.id,
+        "employee_id": emp_id,
+        "employee_code": current_user.employee_code,
+        "roles": role_names,
+        "permissions": list(set(permissions))
+    }
+
+@router.post("/change-password")
+def change_password(data: schemas.PasswordChange, db: Session = Depends(database.get_db), current_user: models.User = Depends(dependencies.get_current_user)):
+    """
+    Change user password.
+    """
+    if not bcrypt.checkpw(data.old_password.encode('utf-8'), current_user.hashed_password.encode('utf-8')):
+        raise HTTPException(status_code=400, detail="Invalid old password")
+        
+    hashed = bcrypt.hashpw(data.new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    current_user.hashed_password = hashed
+    db.commit()
+    return {"message": "Password changed successfully"}
+
 
 @router.post("/setup")
 def setup_default_users(db: Session = Depends(database.get_db)):
@@ -130,7 +180,6 @@ def setup_default_users(db: Session = Depends(database.get_db)):
         if current_assets < target_assets:
             batch = []
             for i in range(current_assets, target_assets):
-                # Distribute statuses to match card counts: 890 Assigned, 230 Available, 125 Maintenance
                 if i < 890: status = "ASSIGNED"
                 elif i < 890 + 230: status = "AVAILABLE"
                 else: status = "MAINTENANCE"
@@ -147,13 +196,51 @@ def setup_default_users(db: Session = Depends(database.get_db)):
                     db.flush()
             if batch:
                 db.add_all(batch)
+
+        # 5. Create User Accounts with UNIQUE passwords
+        test_accounts = [
+            ("SUPER_001", "Superadmin", "System Superadmin", "super123"),
+            ("ADMIN_001", "Admin", "Corporate Admin", "admin123"),
+            ("JD_001", "Employee", "John Doe", "john123"),
+            ("JS_001", "Employee", "Jane Smith", "jane123"),
+            ("AW_001", "Employee", "Alice Webb", "alice123")
+        ]
+        
+        for code, role_name, full_name, raw_pwd in test_accounts:
+            # Ensure Employee exists
+            emp = db.query(models.Employee).filter(models.Employee.employee_code == code).first()
+            if not emp:
+                names = full_name.split()
+                emp = models.Employee(
+                    employee_code=code, 
+                    first_name=names[0], 
+                    last_name=names[1] if len(names) > 1 else "", 
+                    email=f"{code.lower()}@example.com", 
+                    designation=role_name
+                )
+                db.add(emp)
+                db.flush()
+            
+            # Ensure User exists and set/update password
+            user = db.query(models.User).filter(models.User.employee_code == code).first()
+            hashed_pwd = bcrypt.hashpw(raw_pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            
+            if not user:
+                user = models.User(employee_code=code, hashed_password=hashed_pwd)
+                role = db.query(models.Role).filter(models.Role.name == role_name).first()
+                if role:
+                    user.roles.append(role)
+                db.add(user)
+            else:
+                # Update password if already exists to ensure the new unique password works
+                user.hashed_password = hashed_pwd
         
         db.commit()
     except Exception as e:
         db.rollback()
         return {"error": str(e)}
         
-    return {"message": "Setup complete. Original dummy data and bulk assets have been populated."}
+    return {"message": "Setup complete. Unique test accounts provisioned with specific passwords."}
 
 @router.post("/logout")
 def logout():

@@ -13,7 +13,7 @@ router = APIRouter(
     tags=["Asset Assignment"]
 )
 
-@router.post("/", response_model=schemas.AssignmentResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=schemas.AssignmentResponse, status_code=status.HTTP_201_CREATED)
 def assign_asset(assignment: schemas.AssignmentCreate, db: Session = Depends(database.get_db)) -> Any:
     """
     Assign asset to an employee.
@@ -27,7 +27,7 @@ def assign_asset(assignment: schemas.AssignmentCreate, db: Session = Depends(dat
     if not asset or asset.asset_status != 'AVAILABLE':
         raise HTTPException(status_code=400, detail="Asset not available for assignment")
     
-    new_assignment = models.AssetAssignment(**assignment.model_dump())
+    new_assignment = models.AssetAssignment(**assignment.dict())
     db.add(new_assignment)
     
     # Trigger 1: Change status
@@ -47,7 +47,7 @@ def assign_asset(assignment: schemas.AssignmentCreate, db: Session = Depends(dat
     db.refresh(new_assignment)
     return new_assignment
 
-@router.get("/", response_model=List[schemas.AssignmentResponse])
+@router.get("", response_model=List[schemas.AssignmentResponse])
 def get_all_assignments(db: Session = Depends(database.get_db)) -> Any:
     """
     View all assignments mapping directly across assignments.
